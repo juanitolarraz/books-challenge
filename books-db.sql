@@ -87,6 +87,7 @@ CREATE TABLE Users (
     Country VARCHAR(100) NOT NULL,
     Pass VARCHAR(100),
     CategoryId INT NOT NULL,
+    IsAdmin INT NOT NULL,
     PRIMARY KEY(Id),
     FOREIGN KEY (CategoryId) REFERENCES Categories(Id)
 );

@@ -1,5 +1,7 @@
 const bcryptjs = require('bcryptjs');
 const db = require('../database/models');
+const Sequelize = require('sequelize')
+const Op = Sequelize.Op
 
 const mainController = {
   home: (req, res) => {
@@ -12,18 +14,34 @@ const mainController = {
       .catch((error) => console.log(error));
   },
   bookDetail: (req, res) => {
-    // Implement look for details in the database
-    res.render('bookDetail');
+    db.Book.findByPk(req.params.id, {
+      include: [{ association: 'authors' }]
+    })
+      .then((book) => {
+        res.render('bookDetail', { book });
+      })
+      .catch((error) => console.log(error));
   },
   bookSearch: (req, res) => {
     res.render('search', { books: [] });
   },
   bookSearchResult: (req, res) => {
-    // Implement search by title
-    res.render('search');
+    let {title} = req.body
+    db.Book.findAll({
+      where: {title: {[Op.like]: '%' + title + '%'}},
+      include: [{ association: 'authors' }]
+    })
+      .then((books) => {
+        res.render('search', { books });
+      })
+      .catch((error) => console.log(error));
   },
   deleteBook: (req, res) => {
-    // Implement delete book
+    db.Book.destroy({
+      where: {
+          id: req.params.id
+      }
+  })
     res.render('home');
   },
   authors: (req, res) => {
@@ -34,8 +52,14 @@ const mainController = {
       .catch((error) => console.log(error));
   },
   authorBooks: (req, res) => {
-    // Implement books by author
-    res.render('authorBooks');
+    db.Author.findByPk(req.params.id, {
+      include: [{ association: 'books' }]
+    })
+    .then((author) => {
+      res.render('authorBooks', {author});
+    })
+    .catch((error) => console.log(error));
+
   },
   register: (req, res) => {
     res.render('register');
@@ -54,20 +78,48 @@ const mainController = {
       .catch((error) => console.log(error));
   },
   login: (req, res) => {
-    // Implement login process
+    // Implementando el proceso del Login
     res.render('login');
   },
   processLogin: (req, res) => {
-    // Implement login process
-    res.render('home');
-  },
+    let userToLogin;
+    let passwordCompared
+    db.User.findAll()
+      .then(users => {
+        userToLogin = users.find(user => user.Email.toLowerCase() === req.body.email.toLowerCase());
+          if(userToLogin) {
+            passwordCompared = bcryptjs.compareSync(req.body.password, userToLogin.Pass)
+          }
+          if(passwordCompared){
+            let savedName = userToLogin.Name
+
+            res.cookie('login', true)
+            res.cookie('admin', userToLogin.CategoryId)
+            res.cookie('name', savedName)
+
+            res.redirect('/');
+          }
+      })
+    },
+    
   edit: (req, res) => {
-    // Implement edit book
-    res.render('editBook', {id: req.params.id})
+    db.Book.findByPk(req.params.id, {
+      include: [{ association: 'authors' }]
+    })
+      .then((book) => {
+        res.render('editBook', { book });
+      })
+      .catch((error) => console.log(error));
   },
   processEdit: (req, res) => {
-    // Implement edit book
+    // Implementando el edit para los libros
     res.render('home');
+  },
+  logout: (req,res) => {
+    res.clearCookie("login")
+    res.clearCookie("admin")
+    res.clearCookie("name")
+    res.redirect('/')
   }
 };
 
